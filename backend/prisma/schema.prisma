@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  manager
+  employee
+}
+
+model User {
+  id            Int             @id @default(autoincrement())
+  username      String          @unique
+  passwordHash  String
+  fullName      String
+  role          Role
+  isActive      Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  employee      EmployeeProfile?
+  reviewsGiven  Evaluation[]    @relation("ReviewerEvaluations")
+  reviewsOwned  Evaluation[]    @relation("EmployeeEvaluations")
+  managerScopes ManagerScope[]  @relation("ManagerScopes")
+  scopedBy      ManagerScope[]  @relation("EmployeeScopes")
+}
+
+model EmployeeProfile {
+  id            Int      @id @default(autoincrement())
+  userId        Int      @unique
+  employeeNo    String   @unique
+  department    String
+  title         String
+  joinDate      DateTime
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Dimension {
+  id          Int              @id @default(autoincrement())
+  name        String
+  description String
+  weight      Float
+  sortOrder   Int
+  isActive    Boolean          @default(true)
+  items       EvaluationItem[]
+}
+
+model Evaluation {
+  id          Int              @id @default(autoincrement())
+  employeeId  Int
+  reviewerId  Int
+  month       String
+  totalScore  Float
+  remark      String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  employee    User             @relation("EmployeeEvaluations", fields: [employeeId], references: [id], onDelete: Cascade)
+  reviewer    User             @relation("ReviewerEvaluations", fields: [reviewerId], references: [id], onDelete: Cascade)
+  items       EvaluationItem[]
+
+  @@unique([employeeId, month])
+}
+
+model EvaluationItem {
+  id            Int         @id @default(autoincrement())
+  evaluationId  Int
+  dimensionId   Int
+  score         Float
+  weightedScore Float
+  evaluation    Evaluation  @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
+  dimension     Dimension   @relation(fields: [dimensionId], references: [id], onDelete: Restrict)
+
+  @@unique([evaluationId, dimensionId])
+}
+
+model ManagerScope {
+  id          Int      @id @default(autoincrement())
+  managerId   Int
+  employeeId  Int
+  createdAt   DateTime @default(now())
+  manager     User     @relation("ManagerScopes", fields: [managerId], references: [id], onDelete: Cascade)
+  employee    User     @relation("EmployeeScopes", fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([managerId, employeeId])
+}
