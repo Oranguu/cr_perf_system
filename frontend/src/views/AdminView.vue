@@ -11,6 +11,7 @@ const managerScopes = ref<any[]>([]);
 const departmentReport = ref<any>(null);
 const message = ref("");
 const isErrorMessage = computed(() => Boolean(message.value) && !message.value.includes("成功") && !message.value.includes("已提交"));
+const avatarFiles = reactive<Record<number, File | null>>({});
 
 const newUserForm = reactive({
   username: "",
@@ -57,37 +58,52 @@ async function loadScopes() {
 }
 
 async function init() {
-  await Promise.all([loadUsers(), loadDimensions(), loadScopes(), loadDepartmentReport()]);
+  await Promise.all([loadUsers(), loadDimensions(), loadScopes(), loadDepartmentReport(false)]);
 }
 
 async function createUser() {
   message.value = "";
-  await api.post("/users", newUserForm);
-  message.value = "账号创建成功";
-  await loadUsers();
+  try {
+    await api.post("/users", newUserForm);
+    message.value = "账号创建成功";
+    window.alert(message.value);
+    await loadUsers();
+  } catch (error: any) {
+    message.value = error?.response?.data?.message ?? "创建账号失败";
+    window.alert(message.value);
+  }
 }
 
 async function saveScopes() {
   message.value = "";
-  await api.put("/manager-scopes", assignForm);
-  message.value = "主管授权已保存";
-  await loadScopes();
+  try {
+    await api.put("/manager-scopes", assignForm);
+    message.value = "主管授权已保存";
+    window.alert(message.value);
+    await loadScopes();
+  } catch (error: any) {
+    message.value = error?.response?.data?.message ?? "保存主管授权失败";
+    window.alert(message.value);
+  }
 }
 
 async function saveDimensions() {
   message.value = "";
-  await api.put("/dimensions", dimensions.value);
-  message.value = "维度与权重已更新";
+  try {
+    await api.put("/dimensions", dimensions.value);
+    message.value = "维度与权重已更新";
+    window.alert(message.value);
+  } catch (error: any) {
+    message.value = error?.response?.data?.message ?? "保存维度失败";
+    window.alert(message.value);
+  }
 }
 
 async function submitScore() {
   message.value = "";
   if (!scoreForm.employeeId) {
     message.value = "请先选择员工";
-    return;
-  }
-  if (scoreForm.items.some((item) => !item.comment.trim())) {
-    message.value = "请先填写每个维度的评价依据";
+    window.alert(message.value);
     return;
   }
 
@@ -99,17 +115,31 @@ async function submitScore() {
       items: scoreForm.items
     });
     message.value = "评分已提交";
-    await loadDepartmentReport();
+    window.alert(message.value);
+    await loadDepartmentReport(false);
   } catch (error: any) {
     message.value = error?.response?.data?.message ?? "提交失败，请检查输入后重试";
+    window.alert(message.value);
   }
 }
 
-async function loadDepartmentReport() {
-  const { data } = await api.get("/reports/department", {
-    params: { month: month.value }
-  });
-  departmentReport.value = data;
+async function loadDepartmentReport(notify = true) {
+  try {
+    const { data } = await api.get("/reports/department", {
+      params: { month: month.value }
+    });
+    departmentReport.value = data;
+    if (notify) {
+      window.alert("绩效总览已刷新");
+    }
+  } catch (error: any) {
+    message.value = error?.response?.data?.message ?? "刷新总览失败";
+    window.alert(message.value);
+  }
+}
+
+async function onRefreshDepartmentReport() {
+  await loadDepartmentReport(true);
 }
 
 function editFromEvaluation(row: any) {
@@ -124,6 +154,33 @@ function editFromEvaluation(row: any) {
   }));
 
   message.value = `已载入 ${row.employee.fullName} 在 ${row.month} 的评分，可直接修改后提交`;
+  window.alert(message.value);
+}
+
+function toAvatarUrl(avatarUrl?: string) {
+  return avatarUrl ? `http://localhost:4000${avatarUrl}` : "https://placehold.co/44x44?text=U";
+}
+
+function onAvatarFileChange(userId: number, event: Event) {
+  const file = (event.target as HTMLInputElement).files?.[0] ?? null;
+  avatarFiles[userId] = file;
+}
+
+async function uploadAvatar(userId: number) {
+  const file = avatarFiles[userId];
+  if (!file) {
+    window.alert("请先选择头像文件");
+    return;
+  }
+  const formData = new FormData();
+  formData.append("avatar", file);
+  try {
+    await api.post(`/users/${userId}/avatar`, formData);
+    window.alert("头像上传成功");
+    await loadUsers();
+  } catch (error: any) {
+    window.alert(error?.response?.data?.message ?? "头像上传失败");
+  }
 }
 
 onMounted(init);
@@ -156,19 +213,26 @@ onMounted(init);
         <thead>
           <tr>
             <th>ID</th>
+            <th>头像</th>
             <th>用户名</th>
             <th>姓名</th>
             <th>角色</th>
             <th>工号</th>
+            <th>头像操作</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="u in users" :key="u.id">
             <td>{{ u.id }}</td>
+            <td><img class="avatar-cell" :src="toAvatarUrl(u.avatarUrl)" alt="avatar" /></td>
             <td>{{ u.username }}</td>
             <td>{{ u.fullName }}</td>
             <td>{{ u.role }}</td>
             <td>{{ u.employee?.employeeNo ?? "-" }}</td>
+            <td>
+              <input class="input" type="file" accept="image/*" @change="(e) => onAvatarFileChange(u.id, e)" />
+              <button class="btn" style="margin-top: 6px" @click="uploadAvatar(u.id)">上传头像</button>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -208,7 +272,6 @@ onMounted(init);
         </select>
       </div>
       <button class="btn btn-primary" @click="saveScopes">保存授权</button>
-      <pre class="preview">{{ managerScopes }}</pre>
     </section>
 
     <section class="panel block">
@@ -246,7 +309,7 @@ onMounted(init);
           <textarea
             v-model="item.comment"
             class="textarea"
-            placeholder="请填写该维度的评价依据（必填）"
+            placeholder="可选：填写该维度的评价依据"
             style="margin-top: 8px"
           />
         </article>
@@ -266,7 +329,7 @@ onMounted(init);
           <strong>最低：</strong>{{ departmentReport?.summary?.lowest ?? 0 }}
         </div>
         <div style="text-align: right">
-          <button class="btn" @click="loadDepartmentReport">刷新总览</button>
+          <button class="btn" @click="onRefreshDepartmentReport">刷新总览</button>
         </div>
       </div>
 
@@ -354,13 +417,12 @@ onMounted(init);
   gap: 2px;
 }
 
-.preview {
-  background: var(--surface-muted);
-  border: 1px solid var(--line);
+.avatar-cell {
+  width: 42px;
+  height: 42px;
   border-radius: 10px;
-  padding: 10px;
-  font-size: 12px;
-  overflow-x: auto;
+  object-fit: cover;
+  border: 1px solid var(--line);
 }
 
 .summary {

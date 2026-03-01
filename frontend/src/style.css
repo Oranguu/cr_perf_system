@@ -17,6 +17,8 @@
   --line: #e3e8ef;
   --brand: #2f5fe3;
   --brand-soft: #eaf0ff;
+  --brand-2: #3aa0ff;
+  --brand-3: #7f78ff;
   --ok: #14935b;
   --warn: #cb8b09;
 }
@@ -34,7 +36,10 @@ body,
 
 body {
   min-width: 320px;
-  background: radial-gradient(circle at 2% 2%, #ffffff 0%, #f6f8fb 45%, #eef2f8 100%);
+  background:
+    radial-gradient(circle at 8% 10%, rgba(106, 154, 255, 0.18) 0%, rgba(106, 154, 255, 0) 40%),
+    radial-gradient(circle at 90% 4%, rgba(132, 120, 255, 0.14) 0%, rgba(132, 120, 255, 0) 35%),
+    linear-gradient(160deg, #f7f9ff 0%, #eef3fc 52%, #eef1ff 100%);
   color: var(--text);
 }
 
@@ -57,10 +62,13 @@ textarea {
 }
 
 .panel {
-  background: var(--surface);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.92)),
+    linear-gradient(45deg, rgba(80, 127, 255, 0.08), rgba(127, 120, 255, 0.08));
   border: 1px solid var(--line);
   border-radius: 14px;
-  box-shadow: 0 8px 24px rgba(16, 34, 66, 0.06);
+  box-shadow: 0 14px 32px rgba(33, 58, 104, 0.08);
+  backdrop-filter: blur(6px);
 }
 
 .panel-title {
@@ -71,7 +79,7 @@ textarea {
 
 .btn {
   border: 1px solid var(--line);
-  background: var(--surface);
+  background: linear-gradient(180deg, #ffffff, #f4f7ff);
   color: var(--text);
   border-radius: 10px;
   padding: 8px 14px;
@@ -79,9 +87,10 @@ textarea {
 }
 
 .btn-primary {
-  border-color: var(--brand);
-  background: var(--brand);
+  border-color: transparent;
+  background: linear-gradient(120deg, var(--brand) 0%, var(--brand-2) 45%, var(--brand-3) 100%);
   color: #fff;
+  box-shadow: 0 8px 18px rgba(49, 95, 227, 0.3);
 }
 
 .input,
@@ -91,7 +100,7 @@ textarea {
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 10px 12px;
-  background: #fff;
+  background: linear-gradient(180deg, #ffffff, #fbfdff);
   color: var(--text);
 }
 

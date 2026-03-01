@@ -16,29 +16,40 @@ const scoreForm = reactive({
   items: [] as Array<{ dimensionId: number; score: number; comment: string }>
 });
 
-async function loadData() {
-  const [scopeRes, dimRes, myRes] = await Promise.all([
-    api.get("/manager-scopes/my"),
-    api.get("/dimensions"),
-    api.get("/reports/me", { params: { month: month.value } })
-  ]);
-  scopeRows.value = scopeRes.data;
-  dimensions.value = dimRes.data;
-  myReport.value = myRes.data;
-  scoreForm.items = dimensions.value.map((d: any) => ({ dimensionId: d.id, score: 3, comment: "" }));
-  if (scopeRows.value[0]) {
-    scoreForm.employeeId = scopeRows.value[0].employeeId;
+async function loadData(notifyError = true) {
+  try {
+    const [scopeRes, dimRes, myRes] = await Promise.all([
+      api.get("/manager-scopes/my"),
+      api.get("/dimensions"),
+      api.get("/reports/me", { params: { month: month.value } })
+    ]);
+    scopeRows.value = scopeRes.data;
+    dimensions.value = dimRes.data;
+    myReport.value = myRes.data;
+    scoreForm.items = dimensions.value.map((d: any) => ({ dimensionId: d.id, score: 3, comment: "" }));
+    if (scopeRows.value[0]) {
+      scoreForm.employeeId = scopeRows.value[0].employeeId;
+    }
+    return true;
+  } catch (error: any) {
+    message.value = error?.response?.data?.message ?? "加载数据失败";
+    if (notifyError) {
+      window.alert(message.value);
+    }
+    return false;
   }
+}
+
+async function onRefreshMyPerf() {
+  const ok = await loadData(false);
+  window.alert(ok ? "我的绩效已刷新" : message.value || "刷新失败，请重试");
 }
 
 async function submitScore() {
   message.value = "";
   if (!scoreForm.employeeId) {
     message.value = "请先选择员工";
-    return;
-  }
-  if (scoreForm.items.some((item) => !item.comment.trim())) {
-    message.value = "请先填写每个维度的评价依据";
+    window.alert(message.value);
     return;
   }
 
@@ -50,13 +61,17 @@ async function submitScore() {
       items: scoreForm.items
     });
     message.value = "评分提交成功";
-    await loadData();
+    window.alert(message.value);
+    await loadData(false);
   } catch (error: any) {
     message.value = error?.response?.data?.message ?? "提交失败，请检查输入后重试";
+    window.alert(message.value);
   }
 }
 
-onMounted(loadData);
+onMounted(() => {
+  void loadData();
+});
 
 const myCurrentMonthScore = computed(() => {
   const rows = myReport.value?.monthly ?? [];
@@ -88,7 +103,7 @@ const myCurrentMonthScore = computed(() => {
       </div>
       <div class="top-actions">
         <input v-model="month" class="input month" type="month" />
-        <button class="btn btn-primary" @click="loadData">刷新我的绩效</button>
+        <button class="btn btn-primary" @click="onRefreshMyPerf">刷新我的绩效</button>
       </div>
     </section>
 
@@ -97,6 +112,7 @@ const myCurrentMonthScore = computed(() => {
       <table class="table">
         <thead>
           <tr>
+            <th>头像</th>
             <th>员工</th>
             <th>工号</th>
             <th>岗位</th>
@@ -104,6 +120,7 @@ const myCurrentMonthScore = computed(() => {
         </thead>
         <tbody>
           <tr v-for="row in scopeRows" :key="row.id">
+            <td><img class="avatar-cell" :src="row.employee.avatarUrl ? `http://localhost:4000${row.employee.avatarUrl}` : 'https://placehold.co/40x40?text=U'" alt="avatar" /></td>
             <td>{{ row.employee.fullName }}</td>
             <td>{{ row.employee.employee?.employeeNo }}</td>
             <td>{{ row.employee.employee?.title }}</td>
@@ -148,7 +165,7 @@ const myCurrentMonthScore = computed(() => {
           <textarea
             v-model="item.comment"
             class="textarea"
-            placeholder="请填写该维度的评价依据（必填）"
+            placeholder="可选：填写该维度的评价依据"
             style="margin-top: 8px"
           />
         </article>
@@ -221,6 +238,14 @@ const myCurrentMonthScore = computed(() => {
   color: var(--text-soft);
   display: grid;
   gap: 2px;
+}
+
+.avatar-cell {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1px solid var(--line);
 }
 
 .cards {

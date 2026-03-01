@@ -52,7 +52,8 @@ router.post("/login", async (req, res) => {
       id: user.id,
       username: user.username,
       role: user.role,
-      fullName: user.fullName
+      fullName: user.fullName,
+      avatarUrl: user.avatarUrl
     }
   });
 });
@@ -65,6 +66,7 @@ router.get("/me", requireAuth, async (req, res) => {
       username: true,
       role: true,
       fullName: true,
+      avatarUrl: true,
       isActive: true
     }
   });

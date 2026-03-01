@@ -16,7 +16,7 @@ const upsertSchema = z.object({
     z.object({
       dimensionId: z.number().int().positive(),
       score: z.number().min(1).max(5),
-      comment: z.string().min(1, "请填写该维度评价")
+      comment: z.string().optional()
     })
   )
 });
@@ -103,7 +103,10 @@ router.post("/", requireAuth, requireRole(Role.admin, Role.manager), async (req,
     return;
   }
 
-  const scoreResult = calculateWeightedScore(dimensions, data.items);
+  const scoreResult = calculateWeightedScore(
+    dimensions,
+    data.items.map((item) => ({ ...item, comment: item.comment?.trim() ?? "" }))
+  );
 
   const evaluation = await prisma.$transaction(async (tx) => {
     const row = await tx.evaluation.upsert({

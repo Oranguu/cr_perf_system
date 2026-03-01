@@ -17,11 +17,13 @@ async function onSubmit() {
   loading.value = true;
   try {
     await auth.login(form.username, form.password);
+    window.alert("登录成功");
     if (auth.role === "admin") router.push("/admin");
     else if (auth.role === "manager") router.push("/manager");
     else router.push("/employee");
   } catch (error: any) {
     errorMessage.value = error?.response?.data?.message ?? "登录失败，请重试";
+    window.alert(errorMessage.value);
   } finally {
     loading.value = false;
   }

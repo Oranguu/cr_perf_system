@@ -2,10 +2,27 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { Role } from "@prisma/client";
 import { z } from "zod";
+import multer from "multer";
+import path from "node:path";
+import fs from "node:fs";
 import { prisma } from "../prisma.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 
 const router = Router();
+
+const uploadDir = path.resolve(process.cwd(), "uploads");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, uploadDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname) || ".png";
+    cb(null, `avatar-${req.params.id || "me"}-${Date.now()}${ext}`);
+  }
+});
+const avatarUpload = multer({ storage });
 
 const createUserSchema = z.object({
   username: z.string().min(3),
@@ -26,6 +43,7 @@ router.get("/", requireAuth, requireRole(Role.admin), async (_req, res) => {
       username: true,
       fullName: true,
       role: true,
+      avatarUrl: true,
       isActive: true,
       employee: true
     }
@@ -67,10 +85,38 @@ router.post("/", requireAuth, requireRole(Role.admin), async (req, res) => {
             }
           : undefined
     },
-    select: { id: true, username: true, fullName: true, role: true, employee: true }
+    select: { id: true, username: true, fullName: true, role: true, avatarUrl: true, employee: true }
   });
 
   res.status(201).json(user);
+});
+
+router.post("/:id/avatar", requireAuth, avatarUpload.single("avatar"), async (req, res) => {
+  const targetUserId = Number(req.params.id);
+  if (!Number.isFinite(targetUserId) || targetUserId <= 0) {
+    res.status(400).json({ message: "无效的用户ID" });
+    return;
+  }
+
+  if (!req.file) {
+    res.status(400).json({ message: "请先选择头像文件" });
+    return;
+  }
+
+  const canEdit = req.user!.role === Role.admin || req.user!.id === targetUserId;
+  if (!canEdit) {
+    res.status(403).json({ message: "你没有权限上传该用户头像" });
+    return;
+  }
+
+  const avatarUrl = `/uploads/${req.file.filename}`;
+  const user = await prisma.user.update({
+    where: { id: targetUserId },
+    data: { avatarUrl },
+    select: { id: true, fullName: true, avatarUrl: true }
+  });
+
+  res.json({ message: "头像上传成功", user });
 });
 
 export default router;

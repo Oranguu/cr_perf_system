@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
+import path from "node:path";
 import authRoutes from "./routes/auth.js";
 import userRoutes from "./routes/users.js";
 import dimensionRoutes from "./routes/dimensions.js";
@@ -11,10 +12,15 @@ import reportRoutes from "./routes/reports.js";
 
 export const app = express();
 
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false
+  })
+);
 app.use(cors());
 app.use(express.json());
 app.use(morgan("dev"));
+app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
 
 app.get("/health", (_req, res) => {
   res.json({ ok: true });

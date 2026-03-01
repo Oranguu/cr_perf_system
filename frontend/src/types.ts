@@ -7,6 +7,7 @@ export interface LoginResponse {
     username: string;
     fullName: string;
     role: Role;
+    avatarUrl?: string;
   };
 }
 
@@ -28,6 +29,7 @@ export interface User {
   username: string;
   fullName: string;
   role: Role;
+  avatarUrl?: string;
   employee?: {
     employeeNo: string;
     department: string;

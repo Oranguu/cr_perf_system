@@ -32,6 +32,18 @@ export const useAuthStore = defineStore("auth", {
       this.user = null;
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem(USER_KEY);
+    },
+    async refreshMe() {
+      const { data } = await api.get("/auth/me");
+      if (!this.user) return;
+      this.user = {
+        ...this.user,
+        fullName: data.fullName,
+        username: data.username,
+        role: data.role,
+        avatarUrl: data.avatarUrl
+      };
+      localStorage.setItem(USER_KEY, JSON.stringify(this.user));
     }
   }
 });

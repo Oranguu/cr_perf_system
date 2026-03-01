@@ -2,10 +2,13 @@
 import { computed, onMounted, ref } from "vue";
 import AppHeader from "../components/AppHeader.vue";
 import { api } from "../api";
+import { useAuthStore } from "../stores/auth";
 
 const month = ref(new Date().toISOString().slice(0, 7));
 const report = ref<any>(null);
 const loading = ref(false);
+const avatarFile = ref<File | null>(null);
+const auth = useAuthStore();
 
 const latest = computed(() => {
   if (!report.value?.monthly?.length) return null;
@@ -24,8 +27,40 @@ async function loadReport() {
       params: { month: month.value }
     });
     report.value = data;
+    return true;
+  } catch {
+    return false;
   } finally {
     loading.value = false;
+  }
+}
+
+async function onRefresh() {
+  const ok = await loadReport();
+  window.alert(ok ? "已刷新绩效数据" : "刷新失败");
+}
+
+function onAvatarChange(event: Event) {
+  avatarFile.value = (event.target as HTMLInputElement).files?.[0] ?? null;
+}
+
+async function uploadMyAvatar() {
+  if (!auth.user?.id) {
+    window.alert("用户信息丢失，请重新登录");
+    return;
+  }
+  if (!avatarFile.value) {
+    window.alert("请先选择头像文件");
+    return;
+  }
+  const formData = new FormData();
+  formData.append("avatar", avatarFile.value);
+  try {
+    await api.post(`/users/${auth.user.id}/avatar`, formData);
+    await auth.refreshMe();
+    window.alert("头像上传成功");
+  } catch (error: any) {
+    window.alert(error?.response?.data?.message ?? "头像上传失败");
   }
 }
 
@@ -36,10 +71,18 @@ onMounted(loadReport);
   <div class="page-shell">
     <AppHeader />
     <section class="panel block">
+      <h2 class="panel-title">我的头像</h2>
+      <div class="actions">
+        <input class="input" type="file" accept="image/*" @change="onAvatarChange" />
+        <button class="btn btn-primary" @click="uploadMyAvatar">上传头像</button>
+      </div>
+    </section>
+
+    <section class="panel block">
       <h2 class="panel-title">我的绩效总览</h2>
       <div class="actions">
         <input v-model="month" class="input month" type="month" />
-        <button class="btn btn-primary" @click="loadReport">刷新</button>
+        <button class="btn btn-primary" @click="onRefresh">刷新</button>
       </div>
       <p v-if="loading">加载中...</p>
       <div v-else class="cards">
