@@ -13,7 +13,12 @@ const saveDimensionSchema = z.array(
     description: z.string().min(1),
     weight: z.number().positive(),
     sortOrder: z.number().int(),
-    isActive: z.boolean().default(true)
+    isActive: z.boolean().default(true),
+    score5Desc: z.string().min(1),
+    score4Desc: z.string().min(1),
+    score3Desc: z.string().min(1),
+    score2Desc: z.string().min(1),
+    score1Desc: z.string().min(1)
   })
 );
 
@@ -46,7 +51,12 @@ router.put("/", requireAuth, requireRole(Role.admin), async (req, res) => {
         description: item.description,
         weight: item.weight,
         sortOrder: item.sortOrder,
-        isActive: item.isActive
+        isActive: item.isActive,
+        score5Desc: item.score5Desc,
+        score4Desc: item.score4Desc,
+        score3Desc: item.score3Desc,
+        score2Desc: item.score2Desc,
+        score1Desc: item.score1Desc
       }))
     });
     return tx.dimension.findMany({ orderBy: { sortOrder: "asc" } });

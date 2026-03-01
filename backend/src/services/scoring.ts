@@ -3,6 +3,7 @@ import { Dimension } from "@prisma/client";
 export type ScoreInput = {
   dimensionId: number;
   score: number;
+  comment: string;
 };
 
 export type ScoreResult = {
@@ -11,6 +12,7 @@ export type ScoreResult = {
     dimensionId: number;
     score: number;
     weightedScore: number;
+    comment: string;
   }>;
 };
 
@@ -24,14 +26,15 @@ export function calculateWeightedScore(dimensions: Dimension[], items: ScoreInpu
       throw new Error(`维度不存在: ${item.dimensionId}`);
     }
 
-    // 约定单项分为 0~100，维度权重为 0~1。
+    // 约定单项分为 1~5，维度权重为 0~1。
     const weightedScore = Number((item.score * dimension.weight).toFixed(2));
     totalScore += weightedScore;
 
     return {
       dimensionId: item.dimensionId,
       score: item.score,
-      weightedScore
+      weightedScore,
+      comment: item.comment
     };
   });
 

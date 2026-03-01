@@ -64,7 +64,11 @@ router.get("/department", requireAuth, requireRole(Role.admin, Role.manager), as
     where,
     include: {
       employee: { select: { id: true, fullName: true } },
-      reviewer: { select: { id: true, fullName: true } }
+      reviewer: { select: { id: true, fullName: true } },
+      items: {
+        include: { dimension: true },
+        orderBy: { dimension: { sortOrder: "asc" } }
+      }
     },
     orderBy: [{ totalScore: "desc" }, { employeeId: "asc" }]
   });

@@ -16,6 +16,11 @@ export interface Dimension {
   description: string;
   weight: number;
   sortOrder: number;
+  score5Desc: string;
+  score4Desc: string;
+  score3Desc: string;
+  score2Desc: string;
+  score1Desc: string;
 }
 
 export interface User {

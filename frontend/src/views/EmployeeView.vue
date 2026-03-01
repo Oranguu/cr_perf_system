@@ -12,6 +12,11 @@ const latest = computed(() => {
   return [...report.value.monthly].sort((a: any, b: any) => b.month.localeCompare(a.month))[0];
 });
 
+const currentMonthDetail = computed(() => {
+  const rows = report.value?.monthly ?? [];
+  return rows.find((row: any) => row.month === month.value) ?? null;
+});
+
 async function loadReport() {
   loading.value = true;
   try {
@@ -74,6 +79,29 @@ onMounted(loadReport);
           </tr>
         </tbody>
       </table>
+    </section>
+
+    <section class="panel block">
+      <h2 class="panel-title">当前月份维度明细（含评分依据）</h2>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>维度</th>
+            <th>分数（1~5）</th>
+            <th>加权分</th>
+            <th>评价依据</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="item in currentMonthDetail?.items ?? []" :key="item.id">
+            <td>{{ item.dimension.name }}</td>
+            <td>{{ item.score }}</td>
+            <td>{{ item.weightedScore }}</td>
+            <td>{{ item.comment }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <p v-if="!currentMonthDetail" class="sub" style="margin-top: 10px">该月份暂无维度评分明细。</p>
     </section>
   </div>
 </template>

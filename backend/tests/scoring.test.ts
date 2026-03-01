@@ -10,12 +10,12 @@ describe("calculateWeightedScore", () => {
     ] as any;
 
     const result = calculateWeightedScore(dimensions, [
-      { dimensionId: 1, score: 80 },
-      { dimensionId: 2, score: 90 },
-      { dimensionId: 3, score: 70 }
+      { dimensionId: 1, score: 4, comment: "稳定交付" },
+      { dimensionId: 2, score: 5, comment: "效率很高" },
+      { dimensionId: 3, score: 3, comment: "协作一般" }
     ]);
 
-    expect(result.totalScore).toBe(78);
+    expect(result.totalScore).toBe(3.8);
     expect(result.itemRows).toHaveLength(3);
   });
 });

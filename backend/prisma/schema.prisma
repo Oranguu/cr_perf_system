@@ -46,6 +46,11 @@ model Dimension {
   weight      Float
   sortOrder   Int
   isActive    Boolean          @default(true)
+  score5Desc  String           @default("")
+  score4Desc  String           @default("")
+  score3Desc  String           @default("")
+  score2Desc  String           @default("")
+  score1Desc  String           @default("")
   items       EvaluationItem[]
 }
 
@@ -71,6 +76,7 @@ model EvaluationItem {
   dimensionId   Int
   score         Float
   weightedScore Float
+  comment       String      @default("")
   evaluation    Evaluation  @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
   dimension     Dimension   @relation(fields: [dimensionId], references: [id], onDelete: Restrict)
 

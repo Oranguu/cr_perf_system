@@ -15,7 +15,8 @@ const upsertSchema = z.object({
   items: z.array(
     z.object({
       dimensionId: z.number().int().positive(),
-      score: z.number().min(0).max(100)
+      score: z.number().min(1).max(5),
+      comment: z.string().min(1, "请填写该维度评价")
     })
   )
 });
@@ -27,6 +28,16 @@ router.get("/", requireAuth, async (req, res) => {
     return;
   }
 
+  const managerScopeIds =
+    req.user!.role === Role.manager
+      ? (
+          await prisma.managerScope.findMany({
+            where: { managerId: req.user!.id },
+            select: { employeeId: true }
+          })
+        ).map((s) => s.employeeId)
+      : [];
+
   const where =
     req.user!.role === Role.employee
       ? { month, employeeId: req.user!.id }
@@ -34,12 +45,8 @@ router.get("/", requireAuth, async (req, res) => {
         ? {
             month,
             employeeId: {
-              in: (
-                await prisma.managerScope.findMany({
-                  where: { managerId: req.user!.id },
-                  select: { employeeId: true }
-                })
-              ).map((s) => s.employeeId)
+              // 主管具备员工能力：可看自己的绩效，也可看其授权范围内员工。
+              in: [...new Set([...managerScopeIds, req.user!.id])]
             }
           }
         : { month };
@@ -126,7 +133,8 @@ router.post("/", requireAuth, requireRole(Role.admin, Role.manager), async (req,
         evaluationId: row.id,
         dimensionId: item.dimensionId,
         score: item.score,
-        weightedScore: item.weightedScore
+        weightedScore: item.weightedScore,
+        comment: item.comment
       }))
     });
 
