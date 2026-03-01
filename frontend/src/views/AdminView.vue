@@ -2,17 +2,17 @@
 import { computed, onMounted, reactive, ref } from "vue";
 import AppHeader from "../components/AppHeader.vue";
 import { api } from "../api";
+import { useAuthStore } from "../stores/auth";
 import type { Dimension, User } from "../types";
 
 const month = ref(new Date().toISOString().slice(0, 7));
+const auth = useAuthStore();
 const users = ref<User[]>([]);
 const dimensions = ref<Dimension[]>([]);
 const managerScopes = ref<any[]>([]);
 const departmentReport = ref<any>(null);
 const message = ref("");
 const isErrorMessage = computed(() => Boolean(message.value) && !message.value.includes("成功") && !message.value.includes("已提交"));
-const avatarFiles = reactive<Record<number, File | null>>({});
-
 const newUserForm = reactive({
   username: "",
   fullName: "",
@@ -161,15 +161,10 @@ function toAvatarUrl(avatarUrl?: string) {
   return avatarUrl ? `http://localhost:4000${avatarUrl}` : "https://placehold.co/44x44?text=U";
 }
 
-function onAvatarFileChange(userId: number, event: Event) {
-  const file = (event.target as HTMLInputElement).files?.[0] ?? null;
-  avatarFiles[userId] = file;
-}
-
-async function uploadAvatar(userId: number) {
-  const file = avatarFiles[userId];
+async function uploadAvatar(userId: number, event: Event) {
+  const inputEl = event.target as HTMLInputElement;
+  const file = inputEl.files?.[0] ?? null;
   if (!file) {
-    window.alert("请先选择头像文件");
     return;
   }
   const formData = new FormData();
@@ -177,9 +172,14 @@ async function uploadAvatar(userId: number) {
   try {
     await api.post(`/users/${userId}/avatar`, formData);
     window.alert("头像上传成功");
+    if (auth.user?.id === userId) {
+      await auth.refreshMe();
+    }
     await loadUsers();
   } catch (error: any) {
     window.alert(error?.response?.data?.message ?? "头像上传失败");
+  } finally {
+    inputEl.value = "";
   }
 }
 
@@ -218,21 +218,22 @@ onMounted(init);
             <th>姓名</th>
             <th>角色</th>
             <th>工号</th>
-            <th>头像操作</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="u in users" :key="u.id">
             <td>{{ u.id }}</td>
-            <td><img class="avatar-cell" :src="toAvatarUrl(u.avatarUrl)" alt="avatar" /></td>
+            <td>
+              <label class="avatar-editor" title="修改头像">
+                <img class="avatar-cell" :src="toAvatarUrl(u.avatarUrl)" alt="avatar" />
+                <span class="avatar-hover-tip">修改<br />头像</span>
+                <input class="avatar-hidden-input" type="file" accept="image/*" @change="(e) => uploadAvatar(u.id, e)" />
+              </label>
+            </td>
             <td>{{ u.username }}</td>
             <td>{{ u.fullName }}</td>
             <td>{{ u.role }}</td>
             <td>{{ u.employee?.employeeNo ?? "-" }}</td>
-            <td>
-              <input class="input" type="file" accept="image/*" @change="(e) => onAvatarFileChange(u.id, e)" />
-              <button class="btn" style="margin-top: 6px" @click="uploadAvatar(u.id)">上传头像</button>
-            </td>
           </tr>
         </tbody>
       </table>
@@ -423,6 +424,35 @@ onMounted(init);
   border-radius: 10px;
   object-fit: cover;
   border: 1px solid var(--line);
+}
+
+.avatar-editor {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+}
+
+.avatar-hidden-input {
+  display: none;
+}
+
+.avatar-hover-tip {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  font-size: 12px;
+  color: #fff;
+  background: rgba(26, 36, 58, 0.45);
+  text-align: center;
+  line-height: 1.2;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.avatar-editor:hover .avatar-hover-tip {
+  opacity: 1;
 }
 
 .summary {
